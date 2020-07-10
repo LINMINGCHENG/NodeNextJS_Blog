@@ -1,48 +1,56 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
-const crypto =  require('crypto');
-
-
-const userSchema = new mongoose.Schema(
-    {
-        username:{
-            type:String,
-            trim:true,
-            required:true,
-            max:12,
-            unique:true,
-            index:true,
-            lowercase:true
-        },
-        name:{
-            type:String,
-            trim:true,
-            required:true,
-            max:32
-        },
-        email:{
-            type:String,
-            trim:true,
-            required:true,
-            unique:true,
-            lowercase:true
-         },
-         hashed_password:{
-             type:String,
-             required:true,
-         },
-         salt:String,
-         role:{
-             type:String,
-             default:'subscriber'
-         },
-         resetPassordLink:{
-            data:String,
-            default:''
-         }
-    },{timestamps:true}
-)
-
+const userSchema = new mongoose.Schema({
+    username: {
+        type: String,
+        trim: true,
+        required: true,
+        max: 12,
+        unique: true,
+        index: true,
+        lowercase: true
+    },
+    name: {
+        type: String,
+        trim: true,
+        required: true,
+        max: 32
+    },
+    email: {
+        type: String,
+        trim: true,
+        required: true,
+        unique: true,
+        lowercase: true
+    },
+    profile: {
+        type: String,
+        required: true
+    },
+    hashed_password: {
+        type: String,
+        required: true
+    },
+    salt: String,
+    about: {
+        type: String
+    },
+    role: {
+        type: Number,
+        default: 0
+    },
+    photo: {
+        data: Buffer,
+        contentType: String
+    },
+    resetPasswordLink: {
+        data: String,
+        default: ''
+    }
+}, {
+    timestamps: true
+});
 
 //virtual fields
 
@@ -63,28 +71,26 @@ userSchema.virtual('password')
 
 
 //method  > authentication encryptPassword MakeSalt
-userSchema.methods ={
+userSchema.methods = {
+    authenticate: function (plainText) {
+        return this.encryptPassword(plainText) === this.hashed_password;
+    },
 
-  authenticate: function(plainText){
-     return this.encryptPassword(plainText) === this.hashed_password;
-  },
+    encryptPassword: function (password) {
+        if (!password) return '';
+        try {
+            return crypto
+                .createHmac('sha1', this.salt)
+                .update(password)
+                .digest('hex');
+        } catch (err) {
+            return '';
+        }
+    },
 
-  encryptPassword:function(password) {
-      if(!password) return ''
-      try {
-          return crypto.crypto.createHmac('sha1', this.salt)
-              .update(password)
-              .digest('hex');
-      } catch (error) {
-          return ''
-      }
-  },
-
-
-  makeSalt:function(){
-   return Math.round(new Date().valueOf() * Math.random()) + '';
-  }
-
+    makeSalt: function () {
+        return Math.round(new Date().valueOf() * Math.random()) + '';
+    }
 };
 
-module.exports = mongoose.model('User');
+module.exports = mongoose.model('User', userSchema);
